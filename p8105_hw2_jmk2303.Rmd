@@ -13,7 +13,6 @@ Preamble
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # load necessary packages
 library(tidyverse)
-#library(readxl)
 ```
 
 <!------------------------------------------------------------------------------------------
@@ -34,7 +33,7 @@ mrTrashData <-
         path  = "datasets/Trash-Wheel-Collection-Totals-7-2020-2.xlsx"
       , sheet = "Mr. Trash Wheel"
       , range = "A2:N534" # omit the "Grand Total" row
-  ) %>% 
+  ) %>%
   # clean up the variable names
   janitor::clean_names() %>%
   # remove rows that aggregate daily data to monthly summaries
@@ -45,7 +44,7 @@ mrTrashData <-
   ))
 
 # output head of data
-head(mrTrashData)
+head(mrTrashData, 10) %>% knitr::kable()
 ```
 
 ## Cleaning the Precipitation Data for 2018 and 2019
@@ -60,9 +59,9 @@ precipData2018 <-
         path  = "datasets/Trash-Wheel-Collection-Totals-7-2020-2.xlsx"
       , sheet = "2018 Precipitation"
       , range = "A2:B14" # omit the annual total in row 15
-  ) %>% 
+  ) %>%
   # clean up the variable names
-  janitor::clean_names() %>% 
+  janitor::clean_names() %>%
   # add ya column for the year
   mutate(year = 2018)
 
@@ -75,7 +74,7 @@ precipData2019 <-
       , range = "A2:B14" # omit the annual total in row 15
   ) %>% 
   # clean up the variable names
-  janitor::clean_names() %>% 
+  janitor::clean_names() %>%
   # add ya column for the year
   mutate(year = 2019)
 
@@ -86,12 +85,12 @@ precipDataCombined <-
     , precipData2019
   ) %>%
   # convert month to character
-  mutate(month = month.name[month]) %>% 
+  mutate(month = month.name[month]) %>%
   # set year as the leading variable
   relocate(year)
 
 # output head of data
-head(precipDataCombined)
+head(precipDataCombined, 10) %>% knitr::kable()
 ```
 
 ## Summarizing the Data
@@ -99,3 +98,131 @@ head(precipDataCombined)
 The Mr. Trash Wheel dataset consists of data uniquely identified at the dumpster level. Because the volume of trash generated each day is random, there may be multiple dumpsters worth of trash reported on a single day, or there may be no dumpsters worth of trash reported for weeks at a time. Thus, while we have the date that each dumpter worth of trash was collected, we should not think of these as time series data. Data were collected from `r min(pull(mrTrashData, year))` to `r max(pull(mrTrashData, year))` over a period of `r length(unique(paste(as.character(pull(mrTrashData, year)),  pull(mrTrashData, month))))` months. A total of `r nrow(mrTrashData)` dumpsters were collected during this time, implying an average monthly collection of about `r round(nrow(mrTrashData) / length(unique(paste(as.character(pull(mrTrashData, year)),  pull(mrTrashData, month)))), 2)` dumpsters worth of trash. In 2019 alone, Mr. Trash Wheel collected `r round(sum(pull(filter(mrTrashData, year == 2019), weight_tons)), 0)` tons of trash, including `r round(sum(pull(filter(mrTrashData, year == 2019), plastic_bottles)) / 1000, 0)`,000 plastic bottles, `r round(sum(pull(filter(mrTrashData, year == 2019), cigarette_butts)) / 1000, 0)`,000 cigarette butts, and `r round(sum(pull(filter(mrTrashData, year == 2019), grocery_bags)) / 1000, 0)`,000 grocery bags. The median number of sports balls in a dumpster in 2019 was `r median(pull(filter(mrTrashData, year == 2019), sports_balls))`.
 
 The precipitation dataset is much more straightforward: total precipitation in inches is reported for each month between 2018 and 2019; that is, there are `r nrow(precipDataCombined)` in the combined dataset. The total precipitation in 2018 was `r sum(pull(filter(precipDataCombined, year == 2018), total))` inches, and the total precipitation for 2019 was `r sum(pull(filter(precipDataCombined, year == 2019), total))` inches. Analogously, the average monthly precipitation in 2018 was `r round(mean(pull(filter(precipDataCombined, year == 2018), total)), 2)` inches, and the average monthly precipitation for 2019 was `r round(mean(pull(filter(precipDataCombined, year == 2019), total)), 2)` inches. Thus, Mr. Trash Wheel enjoyed a much less rainy year in 2019, with annual precipitation down by `r round(-100 * (sum(pull(filter(precipDataCombined, year == 2019), total)) / sum(pull(filter(precipDataCombined, year == 2018), total)) - 1), 2)`%!
+
+<!------------------------------------------------------------------------------------------
+Problem 2
+------------------------------------------------------------------------------------------->
+
+# Problem 2
+
+## The Monthly Political Affiliation (MPA) Dataset
+
+Let's begin by importing and cleaning a dataset on political affiliation over time, courtesy of FiveThirtyEight.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# read and clean the dataset of political affiliations in government over time
+polsData <-
+  # pull in the data from CSV
+  read_csv("datasets/pols-month.csv") %>%
+  # clean up the variable names
+  janitor::clean_names() %>%
+  # separate month variable into (year, month, day) and convert them to integers
+  separate(
+      col     = mon
+    , into    = c("year", "month", "day")
+    , sep     = "-"
+    , convert = TRUE # convert new variable to integers
+  ) %>% 
+  # convert month to character
+  mutate(month = month.name[month]) %>%
+  # create binary president variable
+  mutate(president = recode(
+        .x  = prez_dem
+      , `0` = "gop"
+      , `1` = "dem"
+  )) %>%
+  # remove extraneous variables
+  select(-c(prez_dem, prez_gop, day)) %>%
+  # order variables such that (year, month, president) lead
+  relocate(year, month, president)
+
+# output head of data
+head(polsData, 10) %>% knitr::kable()
+```
+
+The `r nrow(polsData)` observations in the MPA dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(polsData) - 2` variables in the dataset consist of counts of national politicians by party affiliation (at least, for the two major political parties in the US). The data are reported at a monthly frequency from `r min(pull(polsData, year))` to `r max(pull(polsData, year))`. The variable `president` is binary and indicates whether the sitting president identified as a Democrat or a Republican. Because there can only be one president in a given month, it makes sense for `president` to be binary. Other variables count the number of governors, senators, and representatives by political party in a given month.
+
+## The S&P 500 Dataset
+
+We now import and clean monthly data on the closing price of the S&P 500 Index.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# read and clean the S&P 500 dataset
+snpData <-
+  read_csv("datasets/snp.csv") %>%
+  # clean up the variable names
+  janitor::clean_names() %>%
+  # separate date variable into (month, day, year) and convert them to integers
+  separate(
+      col     = date
+    , into    = c("month", "day", "year")
+    , sep     = "/"
+    , convert = TRUE # convert new variable to integers
+  ) %>%
+  # append century to year
+  mutate(year = as.integer(
+      year + 1900 + (year < 50) * 100 # note: this will not work on and after year 2050
+  )) %>%
+  # arrange observations according to (year, month) before month is converted
+  arrange(year, month) %>%
+  # convert month to character
+  mutate(month = month.name[month]) %>%
+  # remove extraneous variables
+  select(-day) %>%
+  # order variables such that (year, month) lead
+  relocate(year, month)
+
+# output head of data
+head(snpData, 10) %>% knitr::kable()
+```
+
+The `r nrow(snpData)` observations in the S&P 500 Index dataset are uniquely identified by the `year` and `month` variables, and the only other variable gives the close price of the index in the corresponding month. The data are reported at a monthly frequency from `r min(pull(snpData, year))` to `r max(pull(snpData, year))`. The average closing price index during this period was `r round(mean(pull(snpData, close)), 2)`, but with a range of `r round(max(pull(snpData, close)) - min(pull(snpData, close)), 2)` and a standard deviation of `r round(sd(pull(snpData, close)), 2)`, this average is difficult to interpret meaningfully, especially without any adjustment for inflation.
+
+## The Unemployment Rate Dataset
+
+We now import and clean monthly data on the national unemployment rate.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# read and clean the unemployment dataset
+unemploymentData <-
+  read_csv("datasets/unemployment.csv") %>%
+  # clean up the variable names
+  janitor::clean_names() %>%
+  # pivot from wide to long format
+  pivot_longer(
+      cols      = jan:dec
+    , names_to  = "month"
+    , values_to = "percent_unemployed"
+  ) %>%
+  # convert year to integer
+  mutate(year = as.integer(year)) %>%
+  # rename month values to match other datasets
+  mutate(month = month.name[
+    sapply(month, function(x)             # apply function to each element in month vector
+      which(x ==                          # identify corresponding index in month.name
+        substr(tolower(month.name), 1, 3) # first three characters of elements in month.name
+      )
+    )
+  ])
+
+# output head of data
+head(unemploymentData, 10) %>% knitr::kable()
+```
+
+The `r nrow(unemploymentData)` observations in unemployment rate dataset are uniquely identified by the `year` and `month` variables, and the only other variable gives the unemployment rate (as a percentage) itself. The data are reported at a monthly frequency from `r min(pull(unemploymentData, year))` to `r max(pull(unemploymentData, year))`. The average unemployment rate during this period was `r round(mean(pull(unemploymentData, percent_unemployed), na.rm = TRUE), 2)`%, and the standard deviation of the unemployment rate during this period was `r round(sd(pull(unemploymentData, percent_unemployed), na.rm = TRUE), 2)`%, which makes for far less noisy data than the S&P 500 Index dataset.
+
+## The Merged Dataset
+
+With each of our datasets uniquely identified by the pair (year, month), we are now prepared to merge them all together. Because we are interested in analyzing the effect of which party is in power on key macroeconomic variables, we consider a left join of our MPA dataset to the two macroeconomic datasets.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# merge the three datasets
+merged538Data <-
+  # because polsData is our foundation, we employ a left join of polsData to snpData
+  left_join(polsData, snpData, by = c("year", "month")) %>%
+  # next we merge in unemploymentData, again via a left join
+  left_join(unemploymentData, by = c("year", "month"))
+
+# output head of data
+head(merged538Data, 10) %>% knitr::kable()
+```
