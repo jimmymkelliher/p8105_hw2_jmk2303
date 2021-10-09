@@ -21,7 +21,7 @@ Problem 1
 
 # Problem 1
 
-## Cleaning the Mr. Trash Wheel Dataset
+## Tidying the Mr. Trash Wheel Dataset
 
 Let's talk about trash! We first read and clean the Mr. Trash Wheel dataset, courtesy of HealthyHarbor.
 
@@ -47,7 +47,7 @@ mrTrashData <-
 head(mrTrashData, 10) %>% knitr::kable()
 ```
 
-## Cleaning the Precipitation Data for 2018 and 2019
+## Tidying the Precipitation Data for 2018 and 2019
 
 The Trash Wheel Collection dataset also contains data on monthly precipitation (in inches) since 2015. For simplicity, we consider precipitation data for years 2018 and 2019.
 
@@ -105,7 +105,7 @@ Problem 2
 
 # Problem 2
 
-## Cleaning the Monthly Political Affiliation (MPA) Dataset
+## Tidying the Monthly Political Affiliation (MPA) Dataset
 
 Let's begin by importing and cleaning a dataset on political affiliation over time, courtesy of FiveThirtyEight.
 
@@ -142,7 +142,7 @@ head(polsData, 10) %>% knitr::kable()
 
 The `r nrow(polsData)` observations in the MPA dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(polsData) - 2` variables in the dataset consist of counts of national politicians by party affiliation (at least, for the two major political parties in the US). The data are reported at a monthly frequency from `r min(pull(polsData, year))` to `r max(pull(polsData, year))`. The variable `president` is binary and indicates whether the sitting president identified as a Democrat or a Republican. Because there can only be one president at any time, it makes sense for `president` to be binary. Other variables count the number of governors, senators, and representatives by political party in a given month.
 
-## Cleaning the S&P 500 Dataset
+## Tidying the S&P 500 Dataset
 
 We now import and clean monthly data on the closing price of the S&P 500 Index.
 
@@ -179,7 +179,7 @@ head(snpData, 10) %>% knitr::kable()
 
 The `r nrow(snpData)` observations in the S&P 500 Index dataset are uniquely identified by the `year` and `month` variables, and the only other variable gives the close price of the index in the corresponding month. The data are reported at a monthly frequency from `r min(pull(snpData, year))` to `r max(pull(snpData, year))`. The average closing price index during this period was `r round(mean(pull(snpData, close)), 2)`, but with a range of `r round(max(pull(snpData, close)) - min(pull(snpData, close)), 2)` and a standard deviation of `r round(sd(pull(snpData, close)), 2)`, this average is difficult to interpret meaningfully, especially without any adjustment for inflation.
 
-## Cleaning the Unemployment Rate Dataset
+## Tidying the Unemployment Rate Dataset
 
 We now import and clean monthly data on the national unemployment rate.
 
@@ -229,7 +229,7 @@ merged538Data <-
 tail(merged538Data, 10) %>% knitr::kable()
 ```
 
-We have already discussed at length each of the component datasets of our merged dataset. By construction, the `r nrow(merged538Data)` observations in our merged dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(merged538Data) - 2` variables in this dataset correspond to those discussed previously. The number of observations in our merged dataset equals that of the MPA dataset, which makes sense given that it was the _left_ dataset of our `left_join`. While we leave a more comprehensive analysis for a rainy day, this merged data could be employed to tease out the effect of political affiliation on the stock market and the unemployment rate, two macroeconomic variables that are important in describing the health of the economy. As an brief illustration, however, we can see that the historical mean of closing stock price under Democratic presidents was `r round(mean(pull(filter(merged538Data, president == 'dem'), close), na.rm = TRUE), 2)` and under Republican presidents was `r round(mean(pull(filter(merged538Data, president == 'gop'), close), na.rm = TRUE), 2)`.
+We have already discussed at length each of the component datasets of our merged dataset. By construction, the `r nrow(merged538Data)` observations in our merged dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(merged538Data) - 2` variables in this dataset correspond to those discussed previously. The number of observations in our merged dataset equals that of the MPA dataset, which makes sense given that it was the _left_ dataset of our `left_join`. While we leave a more comprehensive analysis for a rainy day, this merged data could be employed to tease out the effect of political affiliation on the stock market and the unemployment rate, two macroeconomic variables that are important in describing the health of the economy. As an brief illustration, however, we can see that the historical mean of closing stock price under Democratic presidents was `r round(mean(pull(filter(merged538Data, president == 'dem'), close), na.rm = TRUE), 2)`, whereas the closing price under Republican presidents was `r round(mean(pull(filter(merged538Data, president == 'gop'), close), na.rm = TRUE), 2)`.
 
 <!------------------------------------------------------------------------------------------
 Problem 3
@@ -237,7 +237,7 @@ Problem 3
 
 # Problem 3
 
-## Cleaning the Baby Name Dataset
+## Tidying the Baby Name Dataset
 
 Let's take a look at the most popular baby names by year, gender, and ethnicity, courtesy of NYC Open Data.
 
@@ -335,7 +335,7 @@ popularMaleNamesTable
 
 ## Creating a Scatter Plot
 
-Finally, we construct a scatter plot count againt rank for Non-Hispanic, White Male Babies Born in NYC in 2016.
+Finally, we construct a scatter plot count againt rank for non-Hispanic, white male babies born in New York City in 2016.
 
 ```{r, echo = TRUE, message = FALSE, warning = FALSE}
 # create scatter plot of count vs rank
