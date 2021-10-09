@@ -13,6 +13,7 @@ Preamble
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # load necessary packages
 library(tidyverse)
+#library(readxl)
 ```
 
 <!------------------------------------------------------------------------------------------
@@ -20,3 +21,81 @@ Problem 1
 ------------------------------------------------------------------------------------------->
 
 # Problem 1
+
+## Cleaning the Mr. Trash Wheel Dataset
+
+Let's talk about trash! We first read and clean the Mr. Trash Wheel dataset, courtesy of HealthyHarbor.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# read and clean the Mr. Trash Wheel dataset
+mrTrashData <-
+  # pull in the data from Excel, omitting non-data entries
+  readxl::read_excel(
+        path  = "datasets/Trash-Wheel-Collection-Totals-7-2020-2.xlsx"
+      , sheet = "Mr. Trash Wheel"
+      , range = "A2:N534" # omit the "Grand Total" row
+  ) %>% 
+  # clean up the variable names
+  janitor::clean_names() %>%
+  # remove rows that aggregate daily data to monthly summaries
+  drop_na("dumpster") %>%
+  # round number sports balls to the nearest integer
+  mutate(sports_balls = as.integer( # convert vector to integer vector
+    round(sports_balls, 0)          # round values to zero decimal places
+  ))
+
+# output head of data
+head(mrTrashData)
+```
+
+## Cleaning the Precipitation Data for 2018 and 2019
+
+The Trash Wheel Collection dataset also contains data on monthly precipitation (in inches) since 2015. For simplicity, we consider precipitation data for years 2018 and 2019.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# read and clean the precipitation dataset for year 2018
+precipData2018 <-
+  # pull in the data from Excel, omitting non-data entries
+  readxl::read_excel(
+        path  = "datasets/Trash-Wheel-Collection-Totals-7-2020-2.xlsx"
+      , sheet = "2018 Precipitation"
+      , range = "A2:B14" # omit the annual total in row 15
+  ) %>% 
+  # clean up the variable names
+  janitor::clean_names() %>% 
+  # add ya column for the year
+  mutate(year = 2018)
+
+# read and clean the precipitation dataset for year 2019
+precipData2019 <-
+  # pull in the data from Excel, omitting non-data entries
+  readxl::read_excel(
+        path  = "datasets/Trash-Wheel-Collection-Totals-7-2020-2.xlsx"
+      , sheet = "2019 Precipitation"
+      , range = "A2:B14" # omit the annual total in row 15
+  ) %>% 
+  # clean up the variable names
+  janitor::clean_names() %>% 
+  # add ya column for the year
+  mutate(year = 2019)
+
+# combine the datasets
+precipDataCombined <-
+  bind_rows(
+      precipData2018
+    , precipData2019
+  ) %>%
+  # convert month to character
+  mutate(month = month.name[month]) %>% 
+  # set year as the leading variable
+  relocate(year)
+
+# output head of data
+head(precipDataCombined)
+```
+
+## Summarizing the Data
+
+The Mr. Trash Wheel dataset consists of data uniquely identified at the dumpster level. Because the volume of trash generated each day is random, there may be multiple dumpsters worth of trash reported on a single day, or there may be no dumpsters worth of trash reported for weeks at a time. Thus, while we have the date that each dumpter worth of trash was collected, we should not think of these as time series data. Data were collected from `r min(pull(mrTrashData, year))` to `r max(pull(mrTrashData, year))` over a period of `r length(unique(paste(as.character(pull(mrTrashData, year)),  pull(mrTrashData, month))))` months. A total of `r nrow(mrTrashData)` dumpsters were collected during this time, implying an average monthly collection of about `r round(nrow(mrTrashData) / length(unique(paste(as.character(pull(mrTrashData, year)),  pull(mrTrashData, month)))), 2)` dumpsters worth of trash. In 2019 alone, Mr. Trash Wheel collected `r round(sum(pull(filter(mrTrashData, year == 2019), weight_tons)), 0)` tons of trash, including `r round(sum(pull(filter(mrTrashData, year == 2019), plastic_bottles)) / 1000, 0)`,000 plastic bottles, `r round(sum(pull(filter(mrTrashData, year == 2019), cigarette_butts)) / 1000, 0)`,000 cigarette butts, and `r round(sum(pull(filter(mrTrashData, year == 2019), grocery_bags)) / 1000, 0)`,000 grocery bags. The median number of sports balls in a dumpster in 2019 was `r median(pull(filter(mrTrashData, year == 2019), sports_balls))`.
+
+The precipitation dataset is much more straightforward: total precipitation in inches is reported for each month between 2018 and 2019; that is, there are `r nrow(precipDataCombined)` in the combined dataset. The total precipitation in 2018 was `r sum(pull(filter(precipDataCombined, year == 2018), total))` inches, and the total precipitation for 2019 was `r sum(pull(filter(precipDataCombined, year == 2019), total))` inches. Analogously, the average monthly precipitation in 2018 was `r round(mean(pull(filter(precipDataCombined, year == 2018), total)), 2)` inches, and the average monthly precipitation for 2019 was `r round(mean(pull(filter(precipDataCombined, year == 2019), total)), 2)` inches. Thus, Mr. Trash Wheel enjoyed a much less rainy year in 2019, with annual precipitation down by `r round(-100 * (sum(pull(filter(precipDataCombined, year == 2019), total)) / sum(pull(filter(precipDataCombined, year == 2018), total)) - 1), 2)`%!
