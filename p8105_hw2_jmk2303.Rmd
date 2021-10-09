@@ -105,7 +105,7 @@ Problem 2
 
 # Problem 2
 
-## The Monthly Political Affiliation (MPA) Dataset
+## Cleaning the Monthly Political Affiliation (MPA) Dataset
 
 Let's begin by importing and cleaning a dataset on political affiliation over time, courtesy of FiveThirtyEight.
 
@@ -140,15 +140,16 @@ polsData <-
 head(polsData, 10) %>% knitr::kable()
 ```
 
-The `r nrow(polsData)` observations in the MPA dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(polsData) - 2` variables in the dataset consist of counts of national politicians by party affiliation (at least, for the two major political parties in the US). The data are reported at a monthly frequency from `r min(pull(polsData, year))` to `r max(pull(polsData, year))`. The variable `president` is binary and indicates whether the sitting president identified as a Democrat or a Republican. Because there can only be one president in a given month, it makes sense for `president` to be binary. Other variables count the number of governors, senators, and representatives by political party in a given month.
+The `r nrow(polsData)` observations in the MPA dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(polsData) - 2` variables in the dataset consist of counts of national politicians by party affiliation (at least, for the two major political parties in the US). The data are reported at a monthly frequency from `r min(pull(polsData, year))` to `r max(pull(polsData, year))`. The variable `president` is binary and indicates whether the sitting president identified as a Democrat or a Republican. Because there can only be one president at any time, it makes sense for `president` to be binary. Other variables count the number of governors, senators, and representatives by political party in a given month.
 
-## The S&P 500 Dataset
+## Cleaning the S&P 500 Dataset
 
 We now import and clean monthly data on the closing price of the S&P 500 Index.
 
 ```{r, echo = TRUE, message = FALSE, warning = FALSE}
 # read and clean the S&P 500 dataset
 snpData <-
+  # pull in the data from CSV
   read_csv("datasets/snp.csv") %>%
   # clean up the variable names
   janitor::clean_names() %>%
@@ -178,13 +179,14 @@ head(snpData, 10) %>% knitr::kable()
 
 The `r nrow(snpData)` observations in the S&P 500 Index dataset are uniquely identified by the `year` and `month` variables, and the only other variable gives the close price of the index in the corresponding month. The data are reported at a monthly frequency from `r min(pull(snpData, year))` to `r max(pull(snpData, year))`. The average closing price index during this period was `r round(mean(pull(snpData, close)), 2)`, but with a range of `r round(max(pull(snpData, close)) - min(pull(snpData, close)), 2)` and a standard deviation of `r round(sd(pull(snpData, close)), 2)`, this average is difficult to interpret meaningfully, especially without any adjustment for inflation.
 
-## The Unemployment Rate Dataset
+## Cleaning the Unemployment Rate Dataset
 
 We now import and clean monthly data on the national unemployment rate.
 
 ```{r, echo = TRUE, message = FALSE, warning = FALSE}
 # read and clean the unemployment dataset
 unemploymentData <-
+  # pull in the data from CSV
   read_csv("datasets/unemployment.csv") %>%
   # clean up the variable names
   janitor::clean_names() %>%
@@ -198,9 +200,9 @@ unemploymentData <-
   mutate(year = as.integer(year)) %>%
   # rename month values to match other datasets
   mutate(month = month.name[
-    sapply(month, function(x)             # apply function to each element in month vector
-      which(x ==                          # identify corresponding index in month.name
-        substr(tolower(month.name), 1, 3) # first three characters of elements in month.name
+    sapply(month, function(x)             # apply a function to each row in the month variable that...
+      which(x ==                          # ... identifies the appropriate index in month.name according to...
+        substr(tolower(month.name), 1, 3) # ... the first three characters of elements in month.name
       )
     )
   ])
@@ -211,7 +213,7 @@ head(unemploymentData, 10) %>% knitr::kable()
 
 The `r nrow(unemploymentData)` observations in unemployment rate dataset are uniquely identified by the `year` and `month` variables, and the only other variable gives the unemployment rate (as a percentage) itself. The data are reported at a monthly frequency from `r min(pull(unemploymentData, year))` to `r max(pull(unemploymentData, year))`. The average unemployment rate during this period was `r round(mean(pull(unemploymentData, percent_unemployed), na.rm = TRUE), 2)`%, and the standard deviation of the unemployment rate during this period was `r round(sd(pull(unemploymentData, percent_unemployed), na.rm = TRUE), 2)`%, which makes for far less noisy data than the S&P 500 Index dataset.
 
-## The Merged Dataset
+## Merging the Three Datasets
 
 With each of our datasets uniquely identified by the pair (year, month), we are now prepared to merge them all together. Because we are interested in analyzing the effect of which party is in power on key macroeconomic variables, we consider a left join of our MPA dataset to the two macroeconomic datasets.
 
@@ -223,6 +225,148 @@ merged538Data <-
   # next we merge in unemploymentData, again via a left join
   left_join(unemploymentData, by = c("year", "month"))
 
-# output head of data
-head(merged538Data, 10) %>% knitr::kable()
+# output tail of data
+tail(merged538Data, 10) %>% knitr::kable()
 ```
+
+We have already discussed at length each of the component datasets of our merged dataset. By construction, the `r nrow(merged538Data)` observations in our merged dataset are uniquely identified by the `year` and `month` variables, and the other `r ncol(merged538Data) - 2` variables in this dataset correspond to those discussed previously. The number of observations in our merged dataset equals that of the MPA dataset, which makes sense given that it was the _left_ dataset of our `left_join`. While we leave a more comprehensive analysis for a rainy day, this merged data could be employed to tease out the effect of political affiliation on the stock market and the unemployment rate, two macroeconomic variables that are important in describing the health of the economy. As an brief illustration, however, we can see that the historical mean of closing stock price under Democratic presidents was `r round(mean(pull(filter(merged538Data, president == 'dem'), close), na.rm = TRUE), 2)` and under Republican presidents was `r round(mean(pull(filter(merged538Data, president == 'gop'), close), na.rm = TRUE), 2)`.
+
+<!------------------------------------------------------------------------------------------
+Problem 3
+------------------------------------------------------------------------------------------->
+
+# Problem 3
+
+## Cleaning the Baby Name Dataset
+
+Let's take a look at the most popular baby names by year, gender, and ethnicity, courtesy of NYC Open Data.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# read and clean the dataset of baby names
+babyNameData <-
+  # pull in the data from CSV
+  read_csv("datasets/Popular_Baby_Names.csv") %>%
+  # clean up the variable names
+  janitor::clean_names() %>%
+  # establish more succinct variable names
+  rename(year = year_of_birth) %>%
+  rename(name = childs_first_name) %>%
+  # compensate for string case inconsistencies
+  mutate(
+      gender    = str_to_title(gender)
+    , ethnicity = str_to_title(ethnicity)
+    , name      = str_to_title(name)
+  ) %>%
+  # recode inconsistently named values for ethnicity
+  mutate(ethnicity = recode(
+      .x               = ethnicity
+    , "Asian And Paci" = "Asian And Pacific Islander"
+    , "Black Non Hisp" = "Black Non Hispanic"
+    , "White Non Hisp" = "White Non Hispanic"
+  )) %>%
+  # convert categorical predictors to factor variables and doubles to integers, where appropriate
+  mutate(
+      year      = as.integer(year)
+    , gender    = as.factor(gender)
+    , ethnicity = as.factor(ethnicity)
+    , count     = as.integer(count)
+    , rank      = as.integer(rank)
+  ) %>%
+  # arrange observations according to (year, gender, ethnicity) with year ascending
+  arrange(year, gender, ethnicity) %>%
+  # remove duplicates
+  distinct()
+
+# output head of data
+head(babyNameData, 10) %>% knitr::kable()
+```
+
+We have addressed several threats to tidiness in the data: (1) values for `ethnicity` are now consistent across years, (2) the case structure for `name` is now consistent across years, and (3) duplicate observations have been removed. Aesthetically, we have also changed variable names and types where it made sense to do so, and we have sorted rows according to birth year in ascending order.
+
+## Creating Reader-friendly Summary Tables
+
+We first construct a table that shows the ranking of the female name Olivia for each ethnicity and for each year.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# construct table of rankings for Olivia for each ethnicity over time
+oliviaTable <-
+  babyNameData %>% 
+  # keep rows for female babies named Olivia
+  filter(gender == "Female", name == "Olivia") %>% 
+  # remove extraneous variables
+  select(-c(gender, name, count)) %>% 
+  # pivot wider to get ethnicity as rows and years as columns
+  pivot_wider(
+      names_from  = "year"
+    , values_from = "rank"
+  ) %>%
+  # rename variable for presentation purposes
+  rename(Ethnicity = ethnicity) %>%
+  # pipe into kable for readability
+  knitr::kable()
+
+# output table
+oliviaTable
+```
+
+We next construct a table that shows the most popular male name for each ethnicity and for each year.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# construct table of most popular male names for each ethnicity over time
+popularMaleNamesTable <-
+  babyNameData %>% 
+  # keep rows for male babies with rank 1
+  filter(gender == "Male", rank == 1) %>% 
+  # remove extraneous variables
+  select(-c(gender, count, rank)) %>% 
+  # pivot wider to get ethnicity as rows and years as columns
+  pivot_wider(
+      names_from  = "year"
+    , values_from = "name"
+  ) %>%
+  # rename variable for presentation purposes
+  rename(Ethnicity = ethnicity) %>%
+  # pipe into kable for readability
+  knitr::kable()
+
+# output table
+popularMaleNamesTable
+```
+
+## Creating a Scatter Plot
+
+Finally, we construct a scatter plot count againt rank for Non-Hispanic, White Male Babies Born in NYC in 2016.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE}
+# create scatter plot of count vs rank
+babyScatter <-
+  # pull entire dataset
+  babyNameData %>% 
+  # keep rows for white, non-hispanic male babies born in 2016
+  filter(
+      year      == 2016
+    , gender    == "Male"
+    , ethnicity == "White Non Hispanic"
+  ) %>%
+  # instantiate scatter plot
+  ggplot(data = ., aes(x = rank, y = count)) + 
+  # add points to scatter plot
+  geom_point() + 
+  # add meta-data
+  labs(
+      title    = "Count Versus Rank of Birth Name"
+    , subtitle = "for Non-Hispanic, White Male Babies Born in NYC in 2016"
+    , x        = "Popularity Rank of Name"
+    , y        = "Count of Babies with Name"
+  ) +
+  # center the title of the graph
+  theme(
+      plot.title   = element_text(hjust = 0.5)
+    , plot.subtitle = element_text(hjust = 0.5)
+  )
+
+# output scatter plot
+babyScatter
+```
+
+Unsurprisingly, count and rank (a function of count) are strongly related. The relationship between these variables appears exponential for more common names and linear for less common names. By construction, the relationship is weakly monotonic.
